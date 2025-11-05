@@ -1,0 +1,48 @@
+databases:
+  - name: runbox-db
+    databaseName: runbox
+    user: runbox
+    plan: free
+
+services:
+  # FastAPI backend (Docker)
+  - type: web
+    name: runbox-api
+    env: docker
+    plan: free
+    dockerfilePath: RunBox/apps/api/Dockerfile
+    dockerContext: RunBox/apps/api
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: RUNBOX_DATABASE_URL
+        fromDatabase:
+          name: runbox-db
+          property: connectionString
+      - key: RUNBOX_BACKEND_CORS_ORIGINS
+        # Replace with your web URL after the first deploy
+        value: "*"
+      - key: RUNBOX_JWT_SECRET_KEY
+        generateValue: true
+
+  # Next.js frontend (Node service)
+  - type: web
+    name: runbox-web
+    env: node
+    plan: free
+    rootDir: RunBox/apps/web
+    buildCommand: |
+      corepack enable && pnpm install --no-frozen-lockfile && pnpm build
+    startCommand: pnpm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NEXT_PUBLIC_API_BASE_URL
+        # Update to the actual API URL after the API service is live
+        value: "https://runbox-api.onrender.com"
+      - key: NEXTAUTH_URL
+        value: "https://runbox-web.onrender.com"
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+
